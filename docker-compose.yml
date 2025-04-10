@@ -1,55 +1,59 @@
-version: "3.8"
 services:
-  auth:
-    build: ./auth
+  auth-service:
+    build: ./auth_service
+    container_name: everstory-auth-service
+    restart: always
     ports:
-      - "8001:8000"
-    env_file:
-      - ./auth/.env
+      - "8010:8000"
     depends_on:
       - auth-db
+      - redis
+      - rabbitmq
+    env_file:
+      - ./auth_service/.env
 
   auth-db:
-    image: postgres:13
-    environment:
-      POSTGRES_DB: auth_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+    image: postgres:latest
+    container_name: everstory-auth-db
+    restart: always
     ports:
       - "5433:5432"
-
-  image:
-    build: ./image
-    ports:
-      - "8002:8000"
     env_file:
-      - ./image/.env
-    depends_on:
-      - image-db
-
-  image-db:
-    image: postgres:13
+      - .env
     environment:
-      POSTGRES_DB: image_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5434:5432"
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - everstory_pgdata:/var/lib/postgresql/data
 
-  friend:
-    build: ./friendship
+  redis:
+    image: redis:latest
+    container_name: everstory-redis
+    restart: always
     ports:
-      - "8003:8000"
+      - "6380:6379"
     env_file:
-      - ./friendship/.env
-    depends_on:
-      - friend-db
+      - .env
+    volumes:
+      - everstory_redis_data:/data
 
-  friend-db:
-    image: postgres:13
-    environment:
-      POSTGRES_DB: friend_db
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: everstory-rabbitmq
+    restart: always
     ports:
-      - "5435:5432"
+      - "5673:5672"
+      - "15673:15672"
+    env_file:
+      - .env
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    volumes:
+      - everstory_rmq_data:/var/lib/rabbitmq
+
+volumes:
+  everstory_pgdata:
+  everstory_redis_data:
+  everstory_rmq_data:
