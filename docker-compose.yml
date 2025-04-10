@@ -1,0 +1,55 @@
+version: "3.8"
+services:
+  auth:
+    build: ./auth
+    ports:
+      - "8001:8000"
+    env_file:
+      - ./auth/.env
+    depends_on:
+      - auth-db
+
+  auth-db:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: auth_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+
+  image:
+    build: ./image
+    ports:
+      - "8002:8000"
+    env_file:
+      - ./image/.env
+    depends_on:
+      - image-db
+
+  image-db:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: image_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5434:5432"
+
+  friend:
+    build: ./friendship
+    ports:
+      - "8003:8000"
+    env_file:
+      - ./friendship/.env
+    depends_on:
+      - friend-db
+
+  friend-db:
+    image: postgres:13
+    environment:
+      POSTGRES_DB: friend_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5435:5432"
