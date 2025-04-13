@@ -14,9 +14,9 @@ class TokenResponse(BaseModel):
     access_token: str = Field(..., example="eyJhbGciOi...")
     token_type: str = Field(..., example="Bearer")
 
-
 class MessageResponse(BaseModel):
     message: str = Field(..., example="Logged out successfully.")
 
 class ErrorResponse(BaseModel):
     detail: str = Field(..., example="Invalid credentials")
+
