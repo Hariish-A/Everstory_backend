@@ -10,3 +10,5 @@ python-jose
 redis
 pika
 pydantic[email]
+tenacity
+httpx

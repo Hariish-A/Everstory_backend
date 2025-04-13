@@ -1,10 +1,10 @@
 services:
   auth-service:
     build: ./auth_service
-    container_name: everstory-auth-service
+    container_name: auth-service
     restart: always
     ports:
-      - "8010:8000"
+      - "8011:8010"
     depends_on:
       - auth-db
       - redis
@@ -14,7 +14,7 @@ services:
 
   auth-db:
     image: postgres:latest
-    container_name: everstory-auth-db
+    container_name: auth-db
     restart: always
     ports:
       - "5433:5432"
@@ -29,7 +29,7 @@ services:
 
   redis:
     image: redis:latest
-    container_name: everstory-redis
+    container_name: redis
     restart: always
     ports:
       - "6380:6379"
@@ -40,7 +40,7 @@ services:
 
   rabbitmq:
     image: rabbitmq:3-management
-    container_name: everstory-rabbitmq
+    container_name: rabbitmq
     restart: always
     ports:
       - "5673:5672"
@@ -53,7 +53,45 @@ services:
     volumes:
       - everstory_rmq_data:/var/lib/rabbitmq
 
+  posts-service:
+    build: ./posts_service
+    container_name: posts-service
+    restart: always
+    ports:
+      - "8021:8020"
+    depends_on:
+      - posts-db
+    env_file:
+      - ./posts_service/.env
+
+  posts-db:
+    image: postgres:latest
+    container_name: posts-db
+    restart: always
+    ports:
+      - "5434:5432"
+    environment:
+      POSTGRES_DB: posts_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - everstory_posts_pgdata:/var/lib/postgresql/data
+
+  gateway-service:
+    build: ./gateway_service
+    container_name: everstory-gateway
+    restart: always
+    ports:
+      - "8001:8000"
+    depends_on:
+      - auth-service
+      - posts-service
+    env_file:
+      - ./gateway_service/.env
+
+
 volumes:
   everstory_pgdata:
   everstory_redis_data:
   everstory_rmq_data:
+  everstory_posts_pgdata:

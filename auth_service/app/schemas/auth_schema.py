@@ -1,5 +1,4 @@
 from pydantic import BaseModel, EmailStr, Field
-from typing import Optional
 
 class SignUpRequest(BaseModel):
     name: str = Field(..., example="John Doe")
@@ -11,12 +10,11 @@ class LoginRequest(BaseModel):
     password: str = Field(..., example="supersecret123")
 
 class TokenResponse(BaseModel):
-    access_token: str = Field(..., example="eyJhbGciOi...")
+    access_token: str = Field(..., example="eyJhbGciOiJIUzI1...")
     token_type: str = Field(..., example="Bearer")
 
 class MessageResponse(BaseModel):
-    message: str = Field(..., example="Logged out successfully.")
+    message: str = Field(..., example="Action completed successfully.")
 
 class ErrorResponse(BaseModel):
     detail: str = Field(..., example="Invalid credentials")
-

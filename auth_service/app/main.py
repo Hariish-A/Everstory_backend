@@ -2,6 +2,8 @@ from fastapi import FastAPI
 from app.controllers import auth_controller
 from app.db.base import Base
 from app.db.session import engine
+import os
+import uvicorn
 
 app = FastAPI(
     title="Everstory Auth Service",
@@ -17,8 +19,24 @@ app = FastAPI(
     },
 )
 
-@app.on_event("startup")
-def startup():
+from tenacity import retry, wait_fixed, stop_after_attempt
+from app.db.base import Base
+from app.db.session import engine
+
+@retry(wait=wait_fixed(2), stop=stop_after_attempt(5))
+def create_tables():
     Base.metadata.create_all(bind=engine)
 
+@app.on_event("startup")
+def startup():
+    create_tables()
+
+
 app.include_router(auth_controller.router, prefix="/auth", tags=["Authentication"])
+
+
+if __name__ == "__main__":
+
+    port = int(os.environ.get("PORT", 8010))
+
+    uvicorn.run("app.main:app", host="0.0.0.0", port=port, reload=True)
