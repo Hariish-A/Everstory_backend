@@ -1,5 +1,5 @@
 from pydantic import BaseModel, EmailStr
-from typing import Optional
+from typing import Optional, List
 from app.enums.role_enum import Role
 
 class UserProfileResponse(BaseModel):
@@ -11,7 +11,6 @@ class UserProfileResponse(BaseModel):
     profile_pic: Optional[str]
     website: Optional[str]
     gender: Optional[str]
-    role: Role
 
     class Config:
         from_attributes = True
@@ -25,3 +24,16 @@ class UserProfileUpdateRequest(BaseModel):
     website: Optional[str] = None
     birth_date: Optional[str] = None
     gender: Optional[str] = None
+    
+class FollowersListResponse(BaseModel):
+    followers: List[UserProfileResponse]
+
+class FollowingListResponse(BaseModel):
+    following: List[UserProfileResponse]
+
+
+class UsernameCheckResponse(BaseModel):
+    exists: bool
+    user_id: int | None = None
+    message: str
+    

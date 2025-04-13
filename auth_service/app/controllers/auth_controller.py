@@ -6,7 +6,8 @@ from app.schemas.auth_schema import (
     SignUpRequest, LoginRequest, TokenResponse,
     MessageResponse, ErrorResponse
 )
-from app.schemas.user_schema import UserProfileResponse, UserProfileUpdateRequest
+from app.schemas.user_schema import UserProfileResponse, UserProfileUpdateRequest, FollowersListResponse, FollowingListResponse, UsernameCheckResponse
+from app.schemas.follow_schema import  FollowCountsResponse
 from app.enums.role_enum import Role
 from app.guards.role_guard import require_role
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
@@ -82,8 +83,24 @@ def verify_token(credentials: HTTPAuthorizationCredentials = Security(security),
     summary="Get current user profile",
     description="Returns the user object associated with the access token"
 )
-def get_profile(credentials: HTTPAuthorizationCredentials = Security(security), db: Session = Depends(get_db)):
-    return auth_service.get_user_profile(credentials.credentials, db)
+def get_my_profile(credentials: HTTPAuthorizationCredentials = Security(security), db: Session = Depends(get_db)):
+    return auth_service.get_my_profile(credentials.credentials, db)
+
+@router.get(
+    "/me/{user_id}",
+    response_model=UserProfileResponse,
+    responses={
+        401: {"model": ErrorResponse},
+        404: {"model": ErrorResponse}
+    },
+    summary="Get current user profile",
+    description="Returns the user object associated with the access token"
+)
+def get_profile(user_id: str, credentials: HTTPAuthorizationCredentials = Security(security), db: Session = Depends(get_db)):
+    return auth_service.get_user_profile(user_id, credentials.credentials, db)
+
+
+
 
 @router.post(
     "/me",
@@ -138,9 +155,26 @@ def create_pfp(payload: CreatePostRequest, credentials: HTTPAuthorizationCredent
 def update_pfp(payload: CreatePostRequest, credentials: HTTPAuthorizationCredentials = Security(security), db: Session = Depends(get_db)):
     return auth_service.update_user_profile_picture(credentials.credentials, db, payload)
 
+@router.post("/follow/{followed_id}", response_model=MessageResponse, summary="Follow a user")
+def follow_user(followed_id: int, credentials: HTTPAuthorizationCredentials = Security(security), db: Session = Depends(get_db)):
+    return auth_service.follow_user(db, credentials.credentials, followed_id)
+
+@router.post("/unfollow/{followed_id}", response_model=MessageResponse, summary="Unfollow a user")
+def unfollow_user(followed_id: int, credentials: HTTPAuthorizationCredentials = Security(security), db: Session = Depends(get_db)):
+    return auth_service.unfollow_user(db, credentials.credentials, followed_id)
+
+@router.get("/followers/{user_id}", response_model=FollowersListResponse, summary="Get followers for a user")
+def get_followers(user_id: int, credentials: HTTPAuthorizationCredentials = Security(security), db: Session = Depends(get_db)):
+    return auth_service.get_followers(db, credentials.credentials, user_id)
+
+@router.get("/following/{user_id}", response_model=FollowingListResponse, summary="Get users a user is following")
+def get_following(user_id: int, credentials: HTTPAuthorizationCredentials = Security(security), db: Session = Depends(get_db)):
+    return auth_service.get_following(db, credentials.credentials, user_id)
 
 
-
+@router.get("/follow-counts/{user_id}", response_model=FollowCountsResponse, summary="Get follower and following counts for a user")
+def get_follow_counts(user_id: int, credentials: HTTPAuthorizationCredentials = Security(security), db: Session = Depends(get_db)):
+    return auth_service.get_follow_counts(db, credentials.credentials, user_id)
 
 # RBAC Protected Routes
 
@@ -159,3 +193,15 @@ def admin_or_user_route():
 @router.get("/moderator-data", summary="Moderator or admin access")
 def mod_view(current_user=Depends(require_role(Role.MODERATOR, Role.ADMIN))):
     return {"msg": f"Hello {current_user.name}, you have moderator/admin access."}
+
+@router.get(
+    "/username-exists/{username}",
+    response_model=UsernameCheckResponse,
+    responses={
+        404: {"model": UsernameCheckResponse}
+    },
+    summary="Check if username exists",
+    description="Returns true and user_id if the username exists"
+)
+def check_username(username: str, db: Session = Depends(get_db)):
+    return auth_service.check_username_exists(db, username)

@@ -2,7 +2,7 @@ services:
   auth-service:
     build: ./auth_service
     container_name: auth-service
-    restart: always
+    restart: on-failure
     ports:
       - "8011:8010"
     depends_on:
@@ -15,7 +15,7 @@ services:
   auth-db:
     image: postgres:latest
     container_name: auth-db
-    restart: always
+    restart: on-failure
     ports:
       - "5433:5432"
     env_file:
@@ -30,7 +30,7 @@ services:
   redis:
     image: redis:latest
     container_name: redis
-    restart: always
+    restart: on-failure
     ports:
       - "6380:6379"
     env_file:
@@ -56,7 +56,7 @@ services:
   posts-service:
     build: ./posts_service
     container_name: posts-service
-    restart: always
+    restart: on-failure
     ports:
       - "8021:8020"
     depends_on:
@@ -67,7 +67,7 @@ services:
   posts-db:
     image: postgres:latest
     container_name: posts-db
-    restart: always
+    restart: on-failure
     ports:
       - "5434:5432"
     environment:
@@ -80,7 +80,7 @@ services:
   gateway-service:
     build: ./gateway_service
     container_name: everstory-gateway
-    restart: always
+    restart: on-failure
     ports:
       - "8001:8000"
     depends_on:
@@ -89,9 +89,35 @@ services:
     env_file:
       - ./gateway_service/.env
 
+  friendship-service:
+    build: ./friendship_service
+    container_name: friendship-service
+    restart: on-failure
+    ports:
+      - "8031:8030"
+    depends_on:
+      - friendship-db
+    env_file:
+      - ./friendship_service/.env
+
+  friendship-db:
+    image: postgres:latest
+    container_name: friendship-db
+    restart: on-failure
+    ports:
+      - "5435:5432"
+    environment:
+      POSTGRES_DB: friendship_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - everstory_friendship_pgdata:/var/lib/postgresql/data
+
+
 
 volumes:
   everstory_pgdata:
   everstory_redis_data:
   everstory_rmq_data:
   everstory_posts_pgdata:
+  everstory_friendship_pgdata:

@@ -1,17 +1,18 @@
 from datetime import timedelta
+from app.schemas.follow_schema import FollowCountsResponse
 from fastapi import HTTPException, status
 from httpx import AsyncClient
 import random
 from app.assets.profile_pictures import pictures
 from sqlalchemy.orm import Session
-from app.models.user import User
+from app.models.user import User, Follower
 from app.models.temp_user import TempUser
 from app.utils.password_hasher import hash_password, verify_password
 from app.handlers.jwt_handler import create_access_token, decode_access_token
 from app.handlers.redis_handler import redis_client
 from app.config.config import settings
 from app.enums.role_enum import Role
-from app.schemas.user_schema import UserProfileUpdateRequest
+from app.schemas.user_schema import UserProfileUpdateRequest, FollowersListResponse, FollowingListResponse, UserProfileResponse
 from app.schemas.profile_picture_schema import CreatePostRequest, CreatePostResponse
 
 
@@ -96,12 +97,23 @@ def verify_token(token: str, db: Session):
     return {"message": "Token is valid", "user_id": user.id, "email": user.email, "role": user.role.name}
 
 
-def get_user_profile(token: str, db: Session) -> User:
+def get_my_profile(token: str, db: Session) -> User:
     payload = decode_access_token(token)
     if not payload:
         raise HTTPException(status_code=401, detail="Invalid token")
 
     user = db.query(User).filter_by(id=payload["user_id"]).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return user
+
+def get_user_profile(user_id, token: str, db: Session) -> User:
+    payload = decode_access_token(token)
+    if not payload:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    user = db.query(User).filter_by(id=user_id).first()
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -156,9 +168,99 @@ def update_user_profile(token: str, db: Session, payload: UserProfileUpdateReque
 
     return user
 
+def follow_user(db: Session, token: str, followed_id: int):
+    user_id = decode_access_token(token).get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    if user_id == followed_id:
+        raise HTTPException(status_code=400, detail="You cannot follow yourself")
+
+    followed_user = db.query(User).filter(User.id == followed_id).first()
+    if not followed_user:
+        raise HTTPException(status_code=404, detail="User to follow not found")
+
+    existing_follow = db.query(Follower).filter(Follower.follower_id == user_id, Follower.followed_id == followed_id).first()
+    if existing_follow:
+        raise HTTPException(status_code=400, detail="You are already following this user")
+
+    follow = Follower(follower_id=user_id, followed_id=followed_id)
+    db.add(follow)
+    db.commit()
+    return {"message": f"You are now following {followed_user.username}"}
+
+def unfollow_user(db: Session, token: str, followed_id: int):
+    user_id = decode_access_token(token).get("user_id")
+    if not user_id:
+        raise HTTPException(status_code=401, detail="Invalid token")
+
+    follow = db.query(Follower).filter(Follower.follower_id == user_id, Follower.followed_id == followed_id).first()
+    if not follow:
+        raise HTTPException(status_code=404, detail="You are not following this user")
+
+    db.delete(follow)
+    db.commit()
+    return {"message": f"You have unfollowed user"}
+
+def get_followers(db: Session, token: str, user_id: int):
+     user = db.query(User).filter(User.id == user_id).first()
+     if not user:
+          raise HTTPException(status_code=404, detail="User not found")
+     
+     followers = user.followers
+     follower_list = []
+
+     for follower in followers:
+          user = db.query(User).filter(User.id == follower.follower_id).first()
+          follower_list.append(UserProfileResponse(id=user.id, name=user.name or "", username=user.username or "", email=user.email or "", bio=user.bio or "", profile_pic=user.profile_pic or "", website=user.website or "", gender=user.gender or "", location=user.location or ""))
+     
+     return FollowersListResponse(followers=follower_list)
+
+def get_following(db: Session, token: str, user_id: int):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    following = user.following
+    following_list = []
+
+    for followed in following:
+        user = db.query(User).filter(User.id == followed.followed_id).first()
+        following_list.append(UserProfileResponse(id=user.id, name=user.name, username=user.username, email=user.email, bio=user.bio, profile_pic=user.profile_pic, website=user.website, gender=user.gender, location=user.location))
+    
+    return FollowingListResponse(following=following_list)
+
+
+def get_follow_counts(db: Session, token: str, user_id: int):
+    user = db.query(User).filter(User.id == user_id).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    followers_count = db.query(Follower).filter(Follower.followed_id == user_id).count()
+    following_count = db.query(Follower).filter(Follower.follower_id == user_id).count()
+
+    return FollowCountsResponse(followers_count=followers_count, following_count=following_count)
 
 async def create_user_profile_picture():
     ... 
     
 async def update_user_profile_picture():
     ...
+
+
+def check_username_exists(db: Session, username: str):
+    user = db.query(User).filter_by(username=username).first()
+    if user:
+        return {
+            "exists": True,
+            "user_id": user.id,
+            "message": "Username exists"
+        }
+    raise HTTPException(
+        status_code=404,
+        detail={
+            "exists": False,
+            "user_id": None,
+            "message": "Username does not exist"
+        }
+    )
