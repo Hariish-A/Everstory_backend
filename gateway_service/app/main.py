@@ -1,5 +1,5 @@
 from fastapi import FastAPI
-from app.routes import auth_proxy, posts_proxy
+from app.routes import auth_proxy, posts_proxy, friendship_proxy
 from app.config.config import settings
 import uvicorn
 import os
@@ -13,6 +13,7 @@ app = FastAPI(
 
 app.include_router(auth_proxy.router, prefix="/auth", tags=["Auth"])
 app.include_router(posts_proxy.router, prefix="/posts", tags=["Posts"])
+app.include_router(friendship_proxy.router, prefix="/friendship", tags=["Friendship"])
 
 app.add_middleware(AuthMiddleware)
 

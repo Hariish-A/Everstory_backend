@@ -12,6 +12,10 @@ class Settings(BaseSettings):
     JWT_SECRET: str
     JWT_ALGORITHM: str
 
+    AUTH_VERIFY_URL: str
+    FRIENDSHIP_SERVICE_URL: str
+    AUTH_SERVICE_URL: str
+
     class Config:
         env_file = ".env"
 

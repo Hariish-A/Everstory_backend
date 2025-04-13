@@ -11,6 +11,8 @@ class UserProfileResponse(BaseModel):
     profile_pic: Optional[str]
     website: Optional[str]
     gender: Optional[str]
+    role: Optional[Role] = None
+    profile_pic: Optional[str] = None
 
     class Config:
         from_attributes = True
@@ -24,6 +26,8 @@ class UserProfileUpdateRequest(BaseModel):
     website: Optional[str] = None
     birth_date: Optional[str] = None
     gender: Optional[str] = None
+    role: Optional[Role] = None
+    profile_pic: Optional[str] = None
     
 class FollowersListResponse(BaseModel):
     followers: List[UserProfileResponse]

@@ -8,7 +8,7 @@ services:
     depends_on:
       - auth-db
       - redis
-      - rabbitmq
+      # - rabbitmq
     env_file:
       - ./auth_service/.env
 
@@ -38,20 +38,20 @@ services:
     volumes:
       - everstory_redis_data:/data
 
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: rabbitmq
-    restart: always
-    ports:
-      - "5673:5672"
-      - "15673:15672"
-    env_file:
-      - .env
-    environment:
-      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
-      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
-    volumes:
-      - everstory_rmq_data:/var/lib/rabbitmq
+  # rabbitmq:
+  #   image: rabbitmq:3-management
+  #   container_name: rabbitmq
+  #   restart: always
+  #   ports:
+  #     - "5673:5672"
+  #     - "15673:15672"
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER}
+  #     RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+  #   volumes:
+  #     - everstory_rmq_data:/var/lib/rabbitmq
 
   posts-service:
     build: ./posts_service
@@ -118,6 +118,6 @@ services:
 volumes:
   everstory_pgdata:
   everstory_redis_data:
-  everstory_rmq_data:
+  # everstory_rmq_data:
   everstory_posts_pgdata:
   everstory_friendship_pgdata:

@@ -1,3 +1,5 @@
+# app/middleware/auth_middleware.py
+
 from fastapi import Request, HTTPException
 from starlette.middleware.base import BaseHTTPMiddleware
 import httpx
@@ -6,7 +8,7 @@ class AuthMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
         path = request.url.path
 
-        # Skip auth for public or auth routes
+        # Skip auth for public/docs/auth
         if path.startswith("/auth") or path in ["/", "/docs", "/openapi.json"]:
             return await call_next(request)
 
@@ -16,23 +18,28 @@ class AuthMiddleware(BaseHTTPMiddleware):
 
         token = auth_header.split(" ")[1]
 
-        # Verify token with auth service
+        # Verify token with Auth service
         async with httpx.AsyncClient() as client:
             try:
                 resp = await client.get(
-                    "http://auth-service:8010/auth/verify-token",
+                    "http://auth-service:8010/auth/me",
                     headers={"Authorization": f"Bearer {token}"}
                 )
                 resp.raise_for_status()
-            except httpx.HTTPStatusError as e:
-                raise HTTPException(status_code=401, detail="Invalid token")
+            except httpx.HTTPStatusError:
+                raise HTTPException(status_code=401, detail="Invalid or expired token")
 
         payload = resp.json()
-        request.state.user_id = payload.get("user_id")
-        request.state.role = payload.get("role")
 
-        # Inject into headers for downstream services
-        request.scope["headers"].append((b"x-user-id", str(payload["user_id"]).encode()))
-        request.scope["headers"].append((b"x-user-role", payload["role"].encode()))
+        # Ensure required fields exist
+        if "id" not in payload:
+            raise HTTPException(status_code=401, detail="User ID missing in auth payload")
+
+        # Inject into headers for internal services
+        request.scope["headers"].append((b"x-user-id", str(payload["id"]).encode()))
+
+        # Optional: inject role only if present
+        if "role" in payload:
+            request.scope["headers"].append((b"x-user-role", payload["role"].encode()))
 
         return await call_next(request)

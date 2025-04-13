@@ -1,13 +1,25 @@
-from jose import jwt, JWTError
-from fastapi import HTTPException, status
+import httpx
+from fastapi import HTTPException, Security
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from app.config.config import settings
 
-def get_user_id_from_token(token: str) -> int:
+security = HTTPBearer()
+
+
+async def verify_token(credentials: HTTPAuthorizationCredentials = Security(security)) -> dict:
     try:
-        payload = jwt.decode(token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
-        user_id = payload.get("user_id")
-        if user_id is None:
-            raise HTTPException(status_code=401, detail="user_id missing in token")
-        return user_id
-    except JWTError:
-        raise HTTPException(status_code=401, detail="Invalid or expired token")
+        async with httpx.AsyncClient() as client:
+            response = await client.get(
+                f"{settings.AUTH_VERIFY_URL}",
+                headers={"Authorization": f"Bearer {credentials.credentials}"}
+            )
+            response.raise_for_status()
+            payload = response.json()
+            return {
+                "id": payload["id"],
+                "role": payload.get("role"),
+                "token": credentials.credentials
+            }
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail="Invalid or expired token")
+    

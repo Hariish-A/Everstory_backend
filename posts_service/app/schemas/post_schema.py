@@ -17,6 +17,7 @@ class ErrorResponse(BaseModel):
 
 class PostResponse(BaseModel):
     id: int
+    user_id: int
     asset_url: Optional[str]
     is_private: bool
     type: Optional[str]
