@@ -72,3 +72,12 @@ async def get_feed(
         skip=skip,
         limit=limit
     )
+
+
+@router.get("/user/{username}/public", response_model=list[PostResponse], summary="Get public posts of a user by username")
+async def get_public_posts_by_username(
+    username: str,
+    db: Session = Depends(get_db)
+):
+    return await post_service.get_public_posts_by_username(username=username, db=db)
+

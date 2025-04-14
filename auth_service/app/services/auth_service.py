@@ -1,4 +1,5 @@
 from datetime import timedelta
+from typing import List
 from app.schemas.follow_schema import FollowCountsResponse
 from fastapi import HTTPException, status
 from httpx import AsyncClient
@@ -264,3 +265,39 @@ def check_username_exists(db: Session, username: str):
             "message": "Username does not exist"
         }
     )
+
+
+def get_user_by_username(db: Session, username: str) -> UserProfileResponse:
+    user = db.query(User).filter_by(username=username).first()
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    return UserProfileResponse(
+        id=user.id,
+        name=user.name or "",
+        username=user.username or "",
+        email=user.email or "",
+        bio=user.bio or "",
+        profile_pic=user.profile_pic or "",
+        website=user.website or "",
+        gender=user.gender or "",
+        location=user.location or ""
+    )
+
+
+def get_all_user_profiles(db: Session, skip: int = 0, limit: int = 10) -> List[UserProfileResponse]:
+    users = db.query(User).offset(skip).limit(limit).all()
+    return [
+        UserProfileResponse(
+            id=user.id,
+            name=user.name or "",
+            username=user.username or "",
+            email=user.email or "",
+            bio=user.bio or "",
+            profile_pic=user.profile_pic or "",
+            website=user.website or "",
+            gender=user.gender or "",
+            location=user.location or ""
+        )
+        for user in users
+    ]

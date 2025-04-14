@@ -187,3 +187,44 @@ async def get_recommended_posts(
         raise HTTPException(status_code=e.response.status_code, detail="External service failure")
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Feed generation failed: {str(e)}")
+
+
+async def get_public_posts_by_username(username: str, db: Session) -> list[dict]:
+    try:
+        async with httpx.AsyncClient() as client:
+            # Step 1: Get user profile from Auth service
+            res = await client.get(
+                f"{settings.AUTH_SERVICE_URL}/auth/username-exists/{username}"
+            )
+            res.raise_for_status()
+            data = res.json()
+
+            if not data.get("exists"):
+                raise HTTPException(status_code=404, detail="Username not found")
+
+            user_id = data.get("user_id")
+            if not user_id:
+                raise HTTPException(status_code=404, detail="User ID not found")
+
+        # Step 2: Query public posts from that user
+        posts = db.query(Post).filter(
+            Post.user_id == user_id,
+            Post.is_private == False,
+            Post.type == PostType.POST
+        ).order_by(Post.created_at.desc()).all()
+
+        return [
+            {
+                "id": p.id,
+                "asset_url": p.asset_url,
+                "user_id": p.user_id,
+                "is_private": p.is_private,
+                "type": p.type.value if p.type else None
+            }
+            for p in posts
+        ]
+
+    except httpx.HTTPStatusError as e:
+        raise HTTPException(status_code=e.response.status_code, detail="Failed to resolve user")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch posts: {str(e)}")

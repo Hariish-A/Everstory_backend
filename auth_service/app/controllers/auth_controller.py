@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import APIRouter, Depends, HTTPException, Security
 from sqlalchemy.orm import Session
 from app.db.session import SessionLocal
@@ -205,3 +206,27 @@ def mod_view(current_user=Depends(require_role(Role.MODERATOR, Role.ADMIN))):
 )
 def check_username(username: str, db: Session = Depends(get_db)):
     return auth_service.check_username_exists(db, username)
+
+
+@router.get(
+    "/profile/{username}",
+    response_model=UserProfileResponse,
+    summary="Get public profile by username",
+    description="Returns the public profile of a user based on the username"
+)
+def get_profile_by_username(username: str, db: Session = Depends(get_db)):
+    return auth_service.get_user_by_username(db, username)
+
+
+@router.get(
+    "/all",
+    response_model=List[UserProfileResponse],
+    summary="Get all user profiles (paginated)",
+    description="Returns paginated list of user profiles"
+)
+def get_all_profiles(
+    skip: int = 0,
+    limit: int = 10,
+    db: Session = Depends(get_db)
+):
+    return auth_service.get_all_user_profiles(db, skip=skip, limit=limit)
